@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XROBOTS — Sistem Cerdas Tersembunyi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Playfair+Display:wght@400;600;700&display=swap');
+        
+        :root {
+            --hitam: #020205;
+            --gelap: #0a0a12;
+            --ungu: #2d1b69;
+            --ungu-terang: #7c3aed;
+            --ungu-pudar: #4c1d95;
+            --perak: #c0c0c0;
+            --abu: #888899;
+            --merah-gelap: #7f1d1d;
+            --emas-gelap: #927424;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background: radial-gradient(circle at top, #1a1040 0%, #0a0a12 40%, #020205 100%);
+            min-height: 100vh; color: #e5e5e5; overflow-x: hidden;
+        }
+        
+        /* Partikel debu gelap melayang */
+        .partikel {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background-image: 
+                radial-gradient(1px 1px at 20px 30px, rgba(124,58,237,0.3), transparent),
+                radial-gradient(1px 1px at 60px 80px, rgba(192,192,192,0.2), transparent),
+                radial-gradient(2px 2px at 120px 40px, rgba(124,58,237,0.2), transparent);
+            background-repeat: repeat; background-size: 200px 200px;
+            animation: melayang 20s linear infinite;
+        }
+        @keyframes melayang {
+            from { transform: translateY(0); }
+            to { transform: translateY(-200px); }
+        }
+        
+        /* Loading layar penuh seram */
+        .layar-muat {
+            position: fixed; inset: 0; background: radial-gradient(circle, #0a0a12, #000);
+            z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 1.2s ease, visibility 1.2s ease;
+        }
+        .layar-muat.hilang { opacity: 0; visibility: hidden; }
+        
+        .bungkus-video {
+            width: 280px; height: 280px; border-radius: 50%; overflow: hidden;
+            border: 2px solid rgba(124,58,237,0.4);
+            box-shadow: 
+                0 0 40px rgba(124,58,237,0.3),
+                inset 0 0 30px rgba(0,0,0,0.8),
+                0 0 80px rgba(45,27,105,0.5);
+            margin-bottom: 40px; position: relative;
+        }
+        .bungkus-video video {
+            width: 100%; height: 100%; object-fit: cover;
+            filter: saturate(0.8) contrast(1.1);
+        }
+        .bungkus-video::after {
+            content: ''; position: absolute; inset: 0;
+            box-shadow: inset 0 0 40px rgba(124,58,237,0.4); border-radius: 50%;
+            pointer-events: none;
+        }
+        
+        .bar-luar {
+            width: 280px; height: 3px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .bar-dalam {
+            height: 100%; width: 0;
+            background: linear-gradient(90deg, #4c1d95, #7c3aed, #c084fc);
+            border-radius: 3px; transition: width 0.2s ease;
+            box-shadow: 0 0 10px #7c3aed, 0 0 20px rgba(124,58,237,0.4);
+        }
+        .teks-muat {
+            margin-top: 15px; font-size: 14px; letter-spacing: 4px; color: #888;
+            text-transform: uppercase;
+        }
+        .persen {
+            margin-top: 8px; font-size: 24px; font-weight: 700; color: #c084fc;
+            text-shadow: 0 0 10px rgba(192,132,252,0.5);
+        }
+        
+        /* Logo Navbar */
+        .bungkus-logo {
+            width: 44px; height: 44px; border-radius: 50%; overflow: hidden;
+            border: 1px solid rgba(192,132,252,0.5);
+            box-shadow: 0 0 12px rgba(124,58,237,0.3);
+            background: #1a1040; flex-shrink: 0;
+        }
+        .bungkus-logo img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .nav-link {
+            position: relative; padding: 8px 4px; font-size: 13px; letter-spacing: 1px;
+            color: #999; transition: all 0.3s ease;
+        }
+        .nav-link:hover { color: #c084fc; }
+        .nav-link::after {
+            content: ''; position: absolute; bottom: 0; left: 50%; width: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, #7c3aed, transparent);
+            transition: all 0.3s ease; transform: translateX(-50%);
+        }
+        .nav-link:hover::after { width: 100%; }
+        
+        .halaman { display: none; }
+        .halaman.aktif { display: block; animation: masuk 0.8s ease forwards; }
+        @keyframes masuk {
+            from { opacity: 0; transform: translateY(20px); filter: blur(4px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+        
+        .kartu {
+            background: linear-gradient(135deg, rgba(26,16,64,0.4), rgba(10,10,18,0.6));
+            backdrop-filter: blur(12px); border: 1px solid rgba(124,58,237,0.2);
+            border-radius: 16px; padding: 28px; transition: all 0.4s ease;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+        .kartu:hover {
+            border-color: rgba(124,58,237,0.4); transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(45,27,105,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        
+        .btn {
+            padding: 14px 28px; border-radius: 10px; font-weight: 600; letter-spacing: 1px;
+            transition: all 0.3s ease; border: none; cursor: pointer; font-size: 14px;
+        }
+        .btn-utama {
+            background: linear-gradient(135deg, #4c1d95, #7c3aed); color: white;
+            box-shadow: 0 4px 15px rgba(124,58,237,0.3);
+        }
+        .btn-utama:hover {
+            transform: translateY(-2px); box-shadow: 0 6px 25px rgba(124,58,237,0.5);
+        }
+        .btn-kedua {
+            background: transparent; border: 1px solid rgba(124,58,237,0.4); color: #c084fc;
+        }
+        .btn-kedua:hover {
+            background: rgba(124,58,237,0.1); border-color: #7c3aed;
+        }
+        .btn-hijau {
+            background: linear-gradient(135deg, #065f46, #047857); color: white;
+        }
+        .btn-hijau:hover { box-shadow: 0 4px 15px rgba(5,150,105,0.3); }
+        .btn-emas {
+            background: linear-gradient(135deg, #927424, #b8860b); color: white;
+        }
+        
+        .input {
+            width: 100%; padding: 14px 18px; background: rgba(0,0,0,0.4);
+            border: 1px solid rgba(124,58,237,0.2); border-radius: 10px; color: #e5e5e5;
+            font-size: 15px; transition: all 0.3s ease;
+        }
+        .input:focus {
+            outline: none; border-color: #7c3aed; box-shadow: 0 0 0 2px rgba(124,58,237,0.2);
+        }
+        
+        .kotak-pesan {
+            min-height: 380px; max-height: 500px; overflow-y: auto; padding: 20px;
+            background: rgba(0,0,0,0.35); border-radius: 12px; border: 1px solid rgba(124,58,237,0.15);
+        }
+        .kotak-pesan::-webkit-scrollbar { width: 4px; }
+        .kotak-pesan::-webkit-scrollbar-thumb { background: #4c1d95; border-radius: 2px; }
+        
+        .pesan-kamu { text-align: right; margin: 12px 0; }
+        .pesan-ai { text-align: left; margin: 12px 0; }
+        .bubble-kamu {
+            display: inline-block; padding: 12px 18px;
+            background: linear-gradient(135deg, #4c1d95, #7c3aed);
+            border-radius: 16px 16px 4px 16px; max-width: 85%;
+            box-shadow: 0 2px 10px rgba(124,58,237,0.2);
+        }
+        .bubble-ai {
+            display: inline-block; padding: 12px 18px;
+            background: rgba(30,30,60,0.6); border: 1px solid rgba(124,58,237,0.2);
+            border-radius: 16px 16px 16px 4px; max-width: 85%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3); line-height: 1.6;
+        }
+        .terkunci {
+            background: rgba(127,29,29,0.2); border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 12px; padding: 30px; text-align: center;
+        }
+        .teks-judul {
+            text-shadow: 0 0 30px rgba(124,58,237,0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="partikel"></div>
+
+    <!-- LAYAR LOADING SERAM -->
+    <div class="layar-muat" id="layarMuat">
+        <div class="bungkus-video">
+            <video id="vidMuat" autoplay playsinline loop>
+                <source src="anime.mp4" type="video/mp4">
+            </video>
+        </div>
+        <h2 class="text-2xl font-bold tracking-widest teks-judul" style="color:#c084fc">XROBOTS</h2>
+        <p class="teks-muat">Memuat sistem tersembunyi...</p>
+        <div class="bar-luar mt-6"><div class="bar-dalam" id="barProses"></div></div>
+        <p class="persen" id="teksPersen">0%</p>
+    </div>
+
+    <div class="container mx-auto px-4 py-6 relative z-10" id="isiUtama" style="opacity:0; transition: opacity 1.5s ease;">
+        
+        <!-- NAVBAR -->
+        <nav class="flex justify-between items-center mb-10">
+            <div class="flex items-center gap-3">
+                <div class="bungkus-logo">
+                    <img src="logo.jpg" alt="Logo" onerror="this.parentElement.innerHTML='<span style=font-size:20px>⚿</span>'">
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-wider" style="color:#c084fc">XROBOTS</h1>
+                    <p class="text-xs text-gray-500">Sistem Cerdas • Gemini</p>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center gap-8">
+                <a href="#" class="nav-link" onclick="tampil('beranda')">BERANDA</a>
+                <a href="#" class="nav-link" onclick="tampil('ai')">OBROLAN</a>
+                <a href="#" class="nav-link" onclick="tampil('saluran')">SALURAN</a>
+                <a href="#" class="nav-link text-yellow-500" id="tautanAdmin" style="display:none" onclick="bukaAdmin()">PANEL</a>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right text-xs hidden sm:block">
+                    <p class="text-purple-400" id="namaPengguna">Tamu</p>
+                    <p class="text-gray-600" id="jamSekarang">--:--</p>
+                </div>
+                <button class="btn text-xs py-2 px-4 bg-red-900/20 text-red-400 border-none hidden" id="tombolKeluar" onclick="keluar()">Keluar</button>
+            </div>
+        </nav>
+
+        <!-- BERANDA -->
+        <div class="halaman aktif" id="halBeranda">
+            <div class="max-w-xl mx-auto text-center py-16">
+                <h1 class="text-4xl md:text-5xl font-bold mb-6 teks-judul">
+                    <span style="color:#c084fc">XROBOTS</span><br>
+                    <span class="text-xl md:text-2xl text-gray-400 font-normal">Kecerdasan buatan yang tersembunyi</span>
+                </h1>
+                <p class="text-gray-500 mb-10 leading-relaxed">
+                    Ditenagai oleh Google Gemini — sistem yang mampu memahami, menganalisis, dan merespons.
+                    Akses terbuka bagi mereka yang mengetahui jalannya.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button class="btn btn-utama" onclick="tampil('login')">Masuk Sistem</button>
+                    <button class="btn btn-kedua" onclick="tampil('daftar')">Daftar Akses</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOGIN -->
+        <div class="halaman" id="halLogin">
+            <div class="max-w-md mx-auto py-10">
+                <div class="kartu">
+                    <h2 class="text-2xl font-bold text-center mb-8 teks-judul" style="color:#c084fc">MASUK SISTEM</h2>
+                    <form onsubmit="masuk(event)">
+                        <div class="mb-5">
+                            <label class="block mb-2 text-sm text-gray-400">Kode Pengguna</label>
+                            <input type="text" id="inpUser" class="input" placeholder="Masukkan identitas..." required>
+                        </div>
+                        <div class="mb-8">
+                            <label class="block mb-2 text-sm text-gray-400">Kunci Akses</label>
+                            <input type="password" id="inpPass" class="input" placeholder="Masukkan kata sandi..." required>
+                        </div>
+                        <button type="submit" class="btn btn-utama w-full">Verifikasi Identitas</button>
+                    </form>
+                    <p class="text-center mt-6 text-sm text-gray-500">
+                        Belum memiliki akses? <a href="#" onclick="tampil('daftar')" class="text-purple-400">Daftar di sini</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAFTAR -->
+        <div class="halaman" id="halDaftar">
+            <div class="max-w-md mx-auto py-10">
+                <div class="kartu">
+                    <h2 class="text-2xl font-bold text-center mb-8 teks-judul" style="color:#c084fc">DAFTAR AKSES BARU</h2>
+                    <form onsubmit="daftar(event)">
+                        <div class="mb-4">
+                            <label class="block mb-2 text-sm text-gray-400">Nama Pengguna</label>
+                            <input type="text" id="regNama" class="input" placeholder="Buat nama pengguna..." required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="block mb-2 text-sm text-gray-400">Nomor WhatsApp</label>
+                            <input type="tel" id="regWa" class="input" placeholder="08..." required>
+                        </div>
+                        <div class="mb-8">
+                            <label class="block mb-2 text-sm text-gray-400">Kata Sandi</label>
+                            <input type="password" id="regSandi" class="input" placeholder="Buat kata sandi..." required>
+                        </div>
+                        <button type="submit" class="btn btn-utama w-full">Buka Akses</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- OBROLAN AI -->
+        <div class="halaman" id="halAi">
+            <div class="max-w-2xl mx-auto py-6">
+                <div class="kartu">
+                    <h2 class="text-xl font-bold mb-6 teks-judul" style="color:#c084fc">⚿ XROBOTS • GEMINI</h2>
+                    
+                    <div class="kotak-pesan mb-4" id="kotakObrolan">
+                        <p class="text-gray-500 text-center py-6">Saya telah menunggu. Tanyakan apa yang ingin kau ketahui...</p>
+                    </div>
+                    
+                    <div id="areaKirim">
+                        <div class="flex gap-3">
+                            <input type="text" id="inpTanya" class="input flex-1" placeholder="Ketik pertanyaanmu..." onkeydown="if(event.key==='Enter')kirimPesan()">
+                            <button class="btn btn-utama" onclick="kirimPesan()">Kirim</button>
+                        </div>
+                    </div>
+                    
+                    <div id="areaTerkunci" class="terkunci mt-4" style="display:none;">
+                        <i class="fa fa-lock text-3xl text-red-500 mb-3"></i>
+                        <h3 class="text-lg font-bold text-red-400 mb-2">Batas Akses Telah Habis</h3>
+                        <p class="text-gray-400 mb-5">Jalur ini telah tertutup. Untuk melanjutkan, hubungi pemilik sistem.</p>
+                        <button class="btn btn-hijau" onclick="hubungiPemilik()">
+                            <i class="fa fa-whatsapp mr-2"></i> Buka Kembali via WhatsApp
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SALURAN -->
+        <div class="halaman" id="halSaluran">
+            <div class="max-w-md mx-auto py-10">
+                <div class="kartu text-center">
+                    <h2 class="text-2xl font-bold mb-6 teks-judul" style="color:#c084fc">SALURAN RAHASIA</h2>
+                    <p class="text-gray-400 mb-8">Ikuti perkembangan, pembaruan, dan rahasia yang dibagikan secara terbatas.</p>
+                    <a href="https://whatsapp.com/channel/0029VbDH55OBadmaIDM3WX3o" target="_blank" class="btn btn-hijau w-full inline-block mb-6">
+                        <i class="fa fa-whatsapp mr-2"></i> Gabung Saluran
+                    </a>
+                    <div class="border-t border-gray-800 pt-6 mt-4">
+                        <h3 class="text-lg font-semibold mb-3 text-yellow-500">💎 Akses Penuh VIP</h3>
+                        <p class="text-gray-500 mb-5">Tanpa batas, prioritas, dukungan langsung.</p>
+                        <button class="btn btn-emas w-full" onclick="daftarVip()">
+                            <i class="fa fa-crown mr-2"></i> Daftar VIP
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const admin = { user: 'dyz1933', pass: 'ceoadi123' };
+        const nomorPemilik = '6283185020321';
+        const MAKS_PERCOBAAN = 5;
+        const API_KEY = "AQ.Ab8RN6J7BY9wPP1yzaqDx0Niha9MlpARTiomwf9nsc7M6TNxrw";
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+        
+        let daftarPengguna = JSON.parse(localStorage.getItem('xr_pengguna') || '[]');
+        let penggunaAktif = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            let pros = 0;
+            const bar = document.getElementById('barProses');
+            const teks = document.getElementById('teksPersen');
+            const proses = setInterval(() => {
+                pros += Math.floor(Math.random()*4)+1;
+                if(pros >= 100) {
+                    pros = 100; clearInterval(proses);
+                    setTimeout(() => {
+                        document.getElementById('vidMuat')?.pause();
+                        document.getElementById('layarMuat').classList.add('hilang');
+                        document.getElementById('isiUtama').style.opacity = '1';
+                        cekSesi();
+                    }, 600);
+                }
+                bar.style.width = pros + '%';
+                teks.textContent = pros + '%';
+            }, 120);
+            
+            setInterval(() => {
+                const d = new Date();
+                document.getElementById('jamSekarang').textContent = 
+                    d.toLocaleDateString('id-ID') + ' • ' + d.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+            }, 1000);
+        });
+
+        function tampil(nama) {
+            document.querySelectorAll('.halaman').forEach(h => h.classList.remove('aktif'));
+            const hal = document.getElementById('hal' + nama.charAt(0).toUpperCase() + nama.slice(1));
+            if(hal) hal.classList.add('aktif');
+        }
+
+        function bukaAdmin() {
+            if(penggunaAktif?.isAdmin) alert('Panel Admin — Siap');
+            else { alert('Masuk sebagai admin dulu'); tampil('login'); }
+        }
+
+        function masuk(e) {
+            e.preventDefault();
+            const u = document.getElementById('inpUser').value.trim();
+            const p = document.getElementById('inpPass').value.trim();
+            
+            if(u === admin.user && p === admin.pass) {
+                penggunaAktif = { nama: u, isAdmin: true, sisa: 999 };
+                localStorage.setItem('xr_sesi', JSON.stringify(penggunaAktif));
+                setelahMasuk(); return;
+            }
+            
+            const ketemu = daftarPengguna.find(x => x.nama === u && x.sandi === p);
+            if(ketemu) {
+                penggunaAktif = { ...ketemu };
+                if(typeof penggunaAktif.sisa === 'undefined') penggunaAktif.sisa = MAKS_PERCOBAAN;
+                localStorage.setItem('xr_sesi', JSON.stringify(penggunaAktif));
+                setelahMasuk();
+            } else alert('Identitas tidak ditemukan');
+        }
+
+        function daftar(e) {
+            e.preventDefault();
+            const n = document.getElementById('regNama').value.trim();
+            const w = document.getElementById('regWa').value.trim();
+            const s = document.getElementById('regSandi').value.trim();
+            if(daftarPengguna.find(x => x.nama === n)) return alert('Nama sudah dipakai');
+            daftarPengguna.push({ nama: n, wa: w, sandi: s, sisa: MAKS_PERCOBAAN });
+            localStorage.setItem('xr_pengguna', JSON.stringify(daftarPengguna));
+            alert('Akses terbuka! Silakan masuk.');
+            tampil('login');
+        }
+
+        function cekSesi() {
+            const sesi = localStorage.getItem('xr_sesi');
+            if(sesi) { penggunaAktif = JSON.parse(sesi); setelahMasuk(); }
+        }
+
+        function setelahMasuk() {
+            document.getElementById('namaPengguna').textContent = penggunaAktif.nama;
+            document.getElementById('tombolKeluar').classList.remove('hidden');
+            if(penggunaAktif.isAdmin) document.getElementById('tautanAdmin').style.display = 'block';
+            cekBatas(); tampil('ai');
+        }
+
+        function keluar() {
+            localStorage.removeItem('xr_sesi'); penggunaAktif = null;
+            document.getElementById('namaPengguna').textContent = 'Tamu';
+            document.getElementById('tombolKeluar').classList.add('hidden');
+            document.getElementById('tautanAdmin').style.display = 'none';
+            tampil('beranda');
+        }
+
+        function cekBatas() {
+            if(penggunaAktif?.isAdmin || penggunaAktif?.isVIP) {
+                document.getElementById('areaKirim').style.display = 'flex';
+                document.getElementById('areaTerkunci').style.display = 'none'; return;
+            }
+            if(penggunaAktif?.sisa <= 0) {
+                document.getElementById('areaKirim').style.display = 'none';
+                document.getElementById('areaTerkunci').style.display = 'block';
+            }
+        }
+
+        function kurangiSisa() {
+            if(penggunaAktif?.isAdmin || penggunaAktif?.isVIP) return true;
+            if(!penggunaAktif || penggunaAktif.sisa <= 0) return false;
+            penggunaAktif.sisa--;
+            localStorage.setItem('xr_sesi', JSON.stringify(penggunaAktif));
+            const idx = daftarPengguna.findIndex(x => x.nama === penggunaAktif.nama);
+            if(idx !== -1) { daftarPengguna[idx].sisa = penggunaAktif.sisa; localStorage.setItem('xr_pengguna', JSON.stringify(daftarPengguna)); }
+            cekBatas(); return true;
+        }
+
+        async function kirimPesan() {
+            if(!penggunaAktif) { alert('Masuk dulu'); tampil('login'); return; }
+            if(!kurangiSisa()) return;
+            
+            const tanya = document.getElementById('inpTanya').value.trim();
+            if(!tanya) return;
+            
+            const kotak = document.getElementById('kotakObrolan');
+            kotak.innerHTML += `<div class="pesan-kamu"><div class="bubble-kamu">${tanya}</div></div>`;
+            document.getElementById('inpTanya').value = '';
+            
+            const idTunggu = 'tunggu-' + Date.now();
+            kotak.innerHTML += `<div id="${idTunggu}" class="pesan-ai"><div class="bubble-ai text-gray-400">Sedang memproses...</div></div>`;
+            kotak.scrollTop = kotak.scrollHeight;
+            
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: tanya }] }] })
+                });
+                const data = await res.json();
+                document.getElementById(idTunggu)?.remove();
+                
+                if(data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    kotak.innerHTML += `<div class="pesan-ai"><div class="bubble-ai">${data.candidates[0].content.parts[0].text}</div></div>`;
+                } else {
+                    kotak.innerHTML += `<div class="pesan-ai"><div class="bubble-ai text-red-400">Kunci API belum aktif. Buat baru di aistudio.google.com</div></div>`;
+                }
+            } catch(err) {
+                document.getElementById(idTunggu)?.remove();
+                kotak.innerHTML += `<div class="pesan-ai"><div class="bubble-ai text-red-400">Kesalahan: ${err.message}</div></div>`;
+            }
+            kotak.scrollTop = kotak.scrollHeight;
+        }
+
+        function hubungiPemilik() {
+            const teks = encodeURIComponent(`Halo! Saya ingin melanjutkan akses XROBOTS 🤖\nNama: ${penggunaAktif?.nama || 'Pengguna'}`);
+            window.open(`https://wa.me/${nomorPemilik}?text=${teks}`, '_blank');
+        }
+
+        function daftarVip() {
+            const teks = encodeURIComponent(`Halo! Saya ingin mendaftar VIP XROBOTS 💎\nNama: ${penggunaAktif?.nama || 'Pengguna'}`);
+            window.open(`https://wa.me/${nomorPemilik}?text=${teks}`, '_blank');
+        }
+    </script>
+</body>
+</html>
